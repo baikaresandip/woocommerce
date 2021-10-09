@@ -1,8 +1,8 @@
 <?php
 /**
- * Settings for PayPal Gateway.
+ * Settings for PayPal Standard Gateway.
  *
- * @package WooCommerce/Classes/Payment
+ * @package WooCommerce\Classes\Payment
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -55,7 +55,7 @@ return array(
 		'label'       => __( 'Enable logging', 'woocommerce' ),
 		'default'     => 'no',
 		/* translators: %s: URL */
-		'description' => sprintf( __( 'Log PayPal events, such as IPN requests, inside %s', 'woocommerce' ), '<code>' . WC_Log_Handler_File::get_log_file_path( 'paypal' ) . '</code>' ),
+		'description' => sprintf( __( 'Log PayPal events, such as IPN requests, inside %s Note: this may log personal information. We recommend using this for debugging purposes only and deleting the logs when finished.', 'woocommerce' ), '<code>' . WC_Log_Handler_File::get_log_file_path( 'paypal' ) . '</code>' ),
 	),
 	'ipn_notification'      => array(
 		'title'       => __( 'IPN Email Notifications', 'woocommerce' ),
@@ -113,14 +113,6 @@ return array(
 			'authorization' => __( 'Authorize', 'woocommerce' ),
 		),
 	),
-	'page_style'            => array(
-		'title'       => __( 'Page style', 'woocommerce' ),
-		'type'        => 'text',
-		'description' => __( 'Optionally enter the name of the page style you wish to use. These are defined within your PayPal account. This affects classic PayPal checkout screens.', 'woocommerce' ),
-		'default'     => '',
-		'desc_tip'    => true,
-		'placeholder' => __( 'Optional', 'woocommerce' ),
-	),
 	'image_url'             => array(
 		'title'       => __( 'Image url', 'woocommerce' ),
 		'type'        => 'text',
@@ -133,7 +125,7 @@ return array(
 		'title'       => __( 'API credentials', 'woocommerce' ),
 		'type'        => 'title',
 		/* translators: %s: URL */
-		'description' => sprintf( __( 'Enter your PayPal API credentials to process refunds via PayPal. Learn how to access your <a href="%s">PayPal API Credentials</a>.', 'woocommerce' ), 'https://developer.paypal.com/webapps/developer/docs/classic/api/apiCredentials/#creating-an-api-signature' ),
+		'description' => sprintf( __( 'Enter your PayPal API credentials to process refunds via PayPal. Learn how to access your <a href="%s">PayPal API Credentials</a>.', 'woocommerce' ), 'https://developer.paypal.com/webapps/developer/docs/classic/api/apiCredentials/#create-an-api-signature' ),
 	),
 	'api_username'          => array(
 		'title'       => __( 'Live API username', 'woocommerce' ),
@@ -153,7 +145,7 @@ return array(
 	),
 	'api_signature'         => array(
 		'title'       => __( 'Live API signature', 'woocommerce' ),
-		'type'        => 'text',
+		'type'        => 'password',
 		'description' => __( 'Get your API credentials from PayPal.', 'woocommerce' ),
 		'default'     => '',
 		'desc_tip'    => true,
@@ -177,7 +169,7 @@ return array(
 	),
 	'sandbox_api_signature' => array(
 		'title'       => __( 'Sandbox API signature', 'woocommerce' ),
-		'type'        => 'text',
+		'type'        => 'password',
 		'description' => __( 'Get your API credentials from PayPal.', 'woocommerce' ),
 		'default'     => '',
 		'desc_tip'    => true,

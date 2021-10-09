@@ -2,16 +2,13 @@
 /**
  * Template Loader
  *
- * @class WC_Template
- * @package WooCommerce/Classes
+ * @package WooCommerce\Classes
  */
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+defined( 'ABSPATH' ) || exit;
 
 /**
- * WC_Template_Loader.
+ * Template loader class.
  */
 class WC_Template_Loader {
 
@@ -56,14 +53,14 @@ class WC_Template_Loader {
 	/**
 	 * Load a template.
 	 *
-	 * Handles template usage so that we can use our own templates instead of the themes.
+	 * Handles template usage so that we can use our own templates instead of the theme's.
 	 *
-	 * Templates are in the 'templates' folder. woocommerce looks for theme.
+	 * Templates are in the 'templates' folder. WooCommerce looks for theme
 	 * overrides in /theme/woocommerce/ by default.
 	 *
-	 * For beginners, it also looks for a woocommerce.php template first. If the user adds.
-	 * this to the theme (containing a woocommerce() inside) this will be used for all.
-	 * woocommerce templates.
+	 * For beginners, it also looks for a woocommerce.php template first. If the user adds
+	 * this to the theme (containing a woocommerce() inside) this will be used for all
+	 * WooCommerce templates.
 	 *
 	 * @param string $template Template to load.
 	 * @return string
@@ -86,7 +83,12 @@ class WC_Template_Loader {
 			$template     = locate_template( $search_files );
 
 			if ( ! $template || WC_TEMPLATE_DEBUG_MODE ) {
-				$template = WC()->plugin_path() . '/templates/' . $default_file;
+				if ( false !== strpos( $default_file, 'product_cat' ) || false !== strpos( $default_file, 'product_tag' ) ) {
+					$cs_template = str_replace( '_', '-', $default_file );
+					$template    = WC()->plugin_path() . '/templates/' . $cs_template;
+				} else {
+					$template = WC()->plugin_path() . '/templates/' . $default_file;
+				}
 			}
 		}
 
@@ -130,7 +132,16 @@ class WC_Template_Loader {
 		$templates[] = 'woocommerce.php';
 
 		if ( is_page_template() ) {
-			$templates[] = get_page_template_slug();
+			$page_template = get_page_template_slug();
+
+			if ( $page_template ) {
+				$validated_file = validate_file( $page_template );
+				if ( 0 === $validated_file ) {
+					$templates[] = $page_template;
+				} else {
+					error_log( "WooCommerce: Unable to validate template path: \"$page_template\". Error Code: $validated_file." );
+				}
+			}
 		}
 
 		if ( is_singular( 'product' ) ) {
@@ -143,14 +154,28 @@ class WC_Template_Loader {
 		}
 
 		if ( is_product_taxonomy() ) {
-			$object      = get_queried_object();
+			$object = get_queried_object();
+
 			$templates[] = 'taxonomy-' . $object->taxonomy . '-' . $object->slug . '.php';
 			$templates[] = WC()->template_path() . 'taxonomy-' . $object->taxonomy . '-' . $object->slug . '.php';
 			$templates[] = 'taxonomy-' . $object->taxonomy . '.php';
 			$templates[] = WC()->template_path() . 'taxonomy-' . $object->taxonomy . '.php';
+
+			if ( is_tax( 'product_cat' ) || is_tax( 'product_tag' ) ) {
+				$cs_taxonomy = str_replace( '_', '-', $object->taxonomy );
+				$cs_default  = str_replace( '_', '-', $default_file );
+				$templates[] = 'taxonomy-' . $object->taxonomy . '-' . $object->slug . '.php';
+				$templates[] = WC()->template_path() . 'taxonomy-' . $cs_taxonomy . '-' . $object->slug . '.php';
+				$templates[] = 'taxonomy-' . $object->taxonomy . '.php';
+				$templates[] = WC()->template_path() . 'taxonomy-' . $cs_taxonomy . '.php';
+				$templates[] = $cs_default;
+			}
 		}
 
 		$templates[] = $default_file;
+		if ( isset( $cs_default ) ) {
+			$templates[] = WC()->template_path() . $cs_default;
+		}
 		$templates[] = WC()->template_path() . $default_file;
 
 		return array_unique( $templates );
@@ -196,7 +221,7 @@ class WC_Template_Loader {
 	 * @since 3.3.0
 	 */
 	public static function unsupported_theme_init() {
-		if ( self::$shop_page_id ) {
+		if ( 0 < self::$shop_page_id ) {
 			if ( is_product_taxonomy() ) {
 				self::unsupported_theme_tax_archive_init();
 			} elseif ( is_product() ) {
@@ -215,7 +240,7 @@ class WC_Template_Loader {
 	private static function unsupported_theme_shop_page_init() {
 		add_filter( 'the_content', array( __CLASS__, 'unsupported_theme_shop_content_filter' ), 10 );
 		add_filter( 'the_title', array( __CLASS__, 'unsupported_theme_title_filter' ), 10, 2 );
-		add_filter( 'comments_number', '__return_empty_string' );
+		add_filter( 'comments_number', array( __CLASS__, 'unsupported_theme_comments_number_filter' ) );
 	}
 
 	/**
@@ -275,7 +300,9 @@ class WC_Template_Loader {
 			$prefix = '';
 		}
 
+		add_filter( 'woocommerce_shortcode_products_query', array( __CLASS__, 'unsupported_archive_layered_nav_compatibility' ) );
 		$shortcode = new WC_Shortcode_Products( $shortcode_args );
+		remove_filter( 'woocommerce_shortcode_products_query', array( __CLASS__, 'unsupported_archive_layered_nav_compatibility' ) );
 		$shop_page = get_post( self::$shop_page_id );
 
 		$dummy_post_properties = array(
@@ -318,7 +345,7 @@ class WC_Template_Loader {
 		$wp_query->is_page       = true;
 		$wp_query->is_single     = true;
 		$wp_query->is_archive    = false;
-		$wp_query->is_tax        = false;
+		$wp_query->is_tax        = true;
 		$wp_query->max_num_pages = 0;
 
 		// Prepare everything for rendering.
@@ -326,6 +353,26 @@ class WC_Template_Loader {
 		remove_all_filters( 'the_content' );
 		remove_all_filters( 'the_excerpt' );
 		add_filter( 'template_include', array( __CLASS__, 'force_single_template_filter' ) );
+	}
+
+	/**
+	 * Add layered nav args to WP_Query args generated by the 'products' shortcode.
+	 *
+	 * @since 3.3.4
+	 * @param array $query WP_Query args.
+	 * @return array
+	 */
+	public static function unsupported_archive_layered_nav_compatibility( $query ) {
+		foreach ( WC()->query->get_layered_nav_chosen_attributes() as $taxonomy => $data ) {
+			$query['tax_query'][] = array(
+				'taxonomy'         => $taxonomy,
+				'field'            => 'slug',
+				'terms'            => $data['terms'],
+				'operator'         => 'and' === $data['query_type'] ? 'AND' : 'IN',
+				'include_children' => false,
+			);
+		}
+		return $query;
 	}
 
 	/**
@@ -424,7 +471,7 @@ class WC_Template_Loader {
 			$args      = self::get_current_shop_view_args();
 			$shortcode = new WC_Shortcode_Products(
 				array_merge(
-					wc()->query->get_catalog_ordering_args(),
+					WC()->query->get_catalog_ordering_args(),
 					array(
 						'page'     => $args->page,
 						'columns'  => $args->columns,
@@ -435,15 +482,16 @@ class WC_Template_Loader {
 						'cache'    => false,
 					)
 				),
-			'products' );
+				'products'
+			);
 
 			// Allow queries to run e.g. layered nav.
-			add_action( 'pre_get_posts', array( wc()->query, 'product_query' ) );
+			add_action( 'pre_get_posts', array( WC()->query, 'product_query' ) );
 
 			$content = $content . $shortcode->get_content();
 
 			// Remove actions and self to avoid nested calls.
-			remove_action( 'pre_get_posts', array( wc()->query, 'product_query' ) );
+			remove_action( 'pre_get_posts', array( WC()->query, 'product_query' ) );
 			WC()->query->remove_ordering_args();
 		}
 
@@ -474,12 +522,27 @@ class WC_Template_Loader {
 		remove_filter( 'the_content', array( __CLASS__, 'unsupported_theme_product_content_filter' ) );
 
 		if ( is_product() ) {
-			$content = do_shortcode( '[product_page id="' . get_the_ID() . '" show_title=0]' );
+			$content = do_shortcode( '[product_page id="' . get_the_ID() . '" show_title=0 status="any"]' );
 		}
 
 		self::$in_content_filter = false;
 
 		return $content;
+	}
+
+	/**
+	 * Suppress the comments number on the Shop page for unsupported themes since there is no commenting on the Shop page.
+	 *
+	 * @since 3.4.5
+	 * @param string $comments_number The comments number text.
+	 * @return string
+	 */
+	public static function unsupported_theme_comments_number_filter( $comments_number ) {
+		if ( is_page( self::$shop_page_id ) ) {
+			return '';
+		}
+
+		return $comments_number;
 	}
 
 	/**

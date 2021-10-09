@@ -11,7 +11,7 @@
  * the readme will list any important changes.
  *
  * @see https://docs.woocommerce.com/document/template-structure/
- * @package WooCommerce/Templates
+ * @package WooCommerce\Templates
  * @version 3.4.0
  */
 
@@ -41,7 +41,7 @@ $text_align = is_rtl() ? 'right' : 'left';
 						switch ( $column_id ) {
 							case 'download-product':
 								?>
-								<a href="<?php echo esc_url( get_permalink( $download['product_id'] ) ); ?>"><?php echo esc_html( $download['product_name'] ); ?></a>
+								<a href="<?php echo esc_url( get_permalink( $download['product_id'] ) ); ?>"><?php echo wp_kses_post( $download['product_name'] ); ?></a>
 								<?php
 								break;
 							case 'download-file':

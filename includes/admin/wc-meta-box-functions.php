@@ -4,7 +4,7 @@
  *
  * @author      WooThemes
  * @category    Core
- * @package     WooCommerce/Admin/Functions
+ * @package     WooCommerce\Admin\Functions
  * @version     2.3.0
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -31,24 +31,24 @@ function woocommerce_wp_text_input( $field ) {
 	$data_type              = empty( $field['data_type'] ) ? '' : $field['data_type'];
 
 	switch ( $data_type ) {
-		case 'price' :
+		case 'price':
 			$field['class'] .= ' wc_input_price';
 			$field['value']  = wc_format_localized_price( $field['value'] );
 			break;
-		case 'decimal' :
+		case 'decimal':
 			$field['class'] .= ' wc_input_decimal';
 			$field['value']  = wc_format_localized_decimal( $field['value'] );
 			break;
-		case 'stock' :
+		case 'stock':
 			$field['class'] .= ' wc_input_stock';
 			$field['value']  = wc_stock_amount( $field['value'] );
 			break;
-		case 'url' :
+		case 'url':
 			$field['class'] .= ' wc_input_url';
 			$field['value']  = esc_url( $field['value'] );
 			break;
 
-		default :
+		default:
 			break;
 	}
 
@@ -86,7 +86,7 @@ function woocommerce_wp_text_input( $field ) {
 function woocommerce_wp_hidden_input( $field ) {
 	global $thepostid, $post;
 
-	$thepostid = empty( $thepostid ) ? $post->ID : $thepostid;
+	$thepostid      = empty( $thepostid ) ? $post->ID : $thepostid;
 	$field['value'] = isset( $field['value'] ) ? $field['value'] : get_post_meta( $thepostid, $field['id'], true );
 	$field['class'] = isset( $field['class'] ) ? $field['class'] : '';
 
@@ -190,15 +190,17 @@ function woocommerce_wp_select( $field ) {
 	global $thepostid, $post;
 
 	$thepostid = empty( $thepostid ) ? $post->ID : $thepostid;
-	$field     = wp_parse_args( $field, array(
-		'class'             => 'select short',
-		'style'             => '',
-		'wrapper_class'     => '',
-		'value'             => get_post_meta( $thepostid, $field['id'], true ),
-		'name'              => $field['id'],
-		'desc_tip'          => false,
-		'custom_attributes' => array(),
-	) );
+	$field     = wp_parse_args(
+		$field, array(
+			'class'             => 'select short',
+			'style'             => '',
+			'wrapper_class'     => '',
+			'value'             => get_post_meta( $thepostid, $field['id'], true ),
+			'name'              => $field['id'],
+			'desc_tip'          => false,
+			'custom_attributes' => array(),
+		)
+	);
 
 	$wrapper_attributes = array(
 		'class' => $field['wrapper_class'] . " form-field {$field['id']}_field",
@@ -212,6 +214,7 @@ function woocommerce_wp_select( $field ) {
 	$field_attributes['style'] = $field['style'];
 	$field_attributes['id']    = $field['id'];
 	$field_attributes['name']  = $field['name'];
+	$field_attributes['class'] = $field['class'];
 
 	$tooltip     = ! empty( $field['description'] ) && false !== $field['desc_tip'] ? $field['description'] : '';
 	$description = ! empty( $field['description'] ) && false === $field['desc_tip'] ? $field['description'] : '';
@@ -224,7 +227,7 @@ function woocommerce_wp_select( $field ) {
 		<select <?php echo wc_implode_html_attributes( $field_attributes ); // WPCS: XSS ok. ?>>
 			<?php
 			foreach ( $field['options'] as $key => $value ) {
-				echo '<option value="' . esc_attr( $key ) . '" ' . selected( $field['value'] === $key || ( is_array( $field['value'] ) && in_array( $key, $field['value'], true ) ), true, false ) . '>' . esc_html( $value ) . '</option>';
+				echo '<option value="' . esc_attr( $key ) . '"' . wc_selected( $key, $field['value'] ) . '>' . esc_html( $value ) . '</option>';
 			}
 			?>
 		</select>

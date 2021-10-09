@@ -15,6 +15,8 @@ global $wpdb, $wp_version;
 wp_clear_scheduled_hook( 'woocommerce_scheduled_sales' );
 wp_clear_scheduled_hook( 'woocommerce_cancel_unpaid_orders' );
 wp_clear_scheduled_hook( 'woocommerce_cleanup_sessions' );
+wp_clear_scheduled_hook( 'woocommerce_cleanup_personal_data' );
+wp_clear_scheduled_hook( 'woocommerce_cleanup_logs' );
 wp_clear_scheduled_hook( 'woocommerce_geoip_updater' );
 wp_clear_scheduled_hook( 'woocommerce_tracker_send_event' );
 
@@ -24,6 +26,10 @@ wp_clear_scheduled_hook( 'woocommerce_tracker_send_event' );
  * and to ensure only the site owner can perform this action.
  */
 if ( defined( 'WC_REMOVE_ALL_DATA' ) && true === WC_REMOVE_ALL_DATA ) {
+	// Drop WC Admin tables.
+	include_once dirname( __FILE__ ) . '/packages/woocommerce-admin/src/Install.php';
+	\Automattic\WooCommerce\Admin\Install::drop_tables();
+
 	include_once dirname( __FILE__ ) . '/includes/class-wc-install.php';
 
 	// Roles + caps.
@@ -50,6 +56,7 @@ if ( defined( 'WC_REMOVE_ALL_DATA' ) && true === WC_REMOVE_ALL_DATA ) {
 
 	// Delete options.
 	$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'woocommerce\_%';" );
+	$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE 'widget\_woocommerce\_%';" );
 
 	// Delete usermeta.
 	$wpdb->query( "DELETE FROM $wpdb->usermeta WHERE meta_key LIKE 'woocommerce\_%';" );
@@ -57,27 +64,31 @@ if ( defined( 'WC_REMOVE_ALL_DATA' ) && true === WC_REMOVE_ALL_DATA ) {
 	// Delete posts + data.
 	$wpdb->query( "DELETE FROM {$wpdb->posts} WHERE post_type IN ( 'product', 'product_variation', 'shop_coupon', 'shop_order', 'shop_order_refund' );" );
 	$wpdb->query( "DELETE meta FROM {$wpdb->postmeta} meta LEFT JOIN {$wpdb->posts} posts ON posts.ID = meta.post_id WHERE posts.ID IS NULL;" );
+
+	$wpdb->query( "DELETE FROM {$wpdb->comments} WHERE comment_type IN ( 'order_note' );" );
+	$wpdb->query( "DELETE meta FROM {$wpdb->commentmeta} meta LEFT JOIN {$wpdb->comments} comments ON comments.comment_ID = meta.comment_id WHERE comments.comment_ID IS NULL;" );
+
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}woocommerce_order_items" );
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}woocommerce_order_itemmeta" );
 
 	// Delete terms if > WP 4.2 (term splitting was added in 4.2).
 	if ( version_compare( $wp_version, '4.2', '>=' ) ) {
 		// Delete term taxonomies.
-		foreach ( array( 'product_cat', 'product_tag', 'product_shipping_class', 'product_type' ) as $taxonomy ) {
+		foreach ( array( 'product_cat', 'product_tag', 'product_shipping_class', 'product_type' ) as $_taxonomy ) {
 			$wpdb->delete(
 				$wpdb->term_taxonomy,
 				array(
-					'taxonomy' => $taxonomy,
+					'taxonomy' => $_taxonomy,
 				)
 			);
 		}
 
 		// Delete term attributes.
-		foreach ( $wc_attributes as $taxonomy ) {
+		foreach ( $wc_attributes as $_taxonomy ) {
 			$wpdb->delete(
 				$wpdb->term_taxonomy,
 				array(
-					'taxonomy' => 'pa_' . $taxonomy,
+					'taxonomy' => 'pa_' . $_taxonomy,
 				)
 			);
 		}
